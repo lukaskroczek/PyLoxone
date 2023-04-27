@@ -33,6 +33,7 @@ from .message import (
     parse_message,
 )
 from .tokens import LoxoneToken, TokensMixin
+from .websocket import Websocket
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -96,7 +97,7 @@ class Miniserver(ConnectorMixin, TokensMixin):
         self._structure: dict[str, Any] = {}
         self._tls_check_hostname: bool = True
         self._user_salt: str = ""
-        self._ws: ClientWebSocketResponse
+        self._ws: Websocket
         self._version: str = ""
 
     @property
@@ -317,7 +318,7 @@ class Miniserver(ConnectorMixin, TokensMixin):
             enc_cipher = urllib.parse.quote(cipher.decode())
             command = f"jdev/sys/enc/{enc_cipher}"
 
-        await self._ws.send_str(command)
+        await self._ws.send(command)
         # According to the API docs, "The Miniserver will answer every command
         # it receives, it will return a TextMessage as confirmation." The
         # returned message will have a control attribute which should be the
@@ -410,7 +411,7 @@ class Miniserver(ConnectorMixin, TokensMixin):
         # that websockets use.
         while True:
             await asyncio.sleep(270)  # 270 seconds = 4.5 minutes
-            await self._ws.send_str("keepalive")
+            await self._ws.send("keepalive")
             await self._get_message([MessageType.KEEPALIVE])
 
     async def _receive_and_add_to_queue(self) -> NoReturn:
@@ -441,7 +442,7 @@ class Miniserver(ConnectorMixin, TokensMixin):
         # a keepalive header is sent by itself. No message body follows it.
 
         while True:
-            header_data = await self._ws.receive_bytes()
+            header_data = await self._ws.recv()
             if not isinstance(header_data, bytes):
                 raise LoxoneException(
                     f"Expected a bytes header, but received {header_data}"
@@ -459,8 +460,7 @@ class Miniserver(ConnectorMixin, TokensMixin):
             if header.message_type is MessageType.KEEPALIVE:
                 message_data: str | bytes = ""
             else:
-                ws_msg = await self._ws.receive()
-                message_data = ws_msg.data
+                message_data = await self._ws.recv()
 
             _LOGGER.debug(
                 f"Parsing message {message_data[:80]!r} ({header.message_type})"

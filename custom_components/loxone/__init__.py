@@ -15,8 +15,8 @@ from collections.abc import Callable
 
 import homeassistant.components.group as group
 import voluptuous as vol
-from custom_components.loxone.const import *
-from custom_components.loxone.pyloxone_api import *
+from .const import *
+from .pyloxone_api import *
 from homeassistant.config import get_default_config_dir
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (CONF_HOST, CONF_PASSWORD, CONF_PORT,
@@ -32,7 +32,7 @@ from homeassistant.helpers.device_registry import DeviceEntry
 from homeassistant.helpers.discovery import async_load_platform
 from homeassistant.helpers.entity import Entity
 
-from custom_components.loxone.pyloxone_api.exceptions import LoxoneCommandError
+from .pyloxone_api.exceptions import LoxoneCommandError
 
 # from .helpers import get_miniserver_type
 

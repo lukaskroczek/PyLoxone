@@ -12,6 +12,7 @@ from collections import namedtuple
 from typing import Any, Final
 
 import aiohttp
+import websockets as wslib
 from Crypto.Cipher import PKCS1_v1_5
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
@@ -24,6 +25,8 @@ from .exceptions import (
 )
 from .message import LoxoneResponse
 from .loxone_types import MiniserverProtocol
+from .websocket import Websocket
+from ..const import TIMEOUT
 
 _LOGGER = logging.getLogger(__name__)
 HTTP_CONNECTION_TIMEOUT: Final = 10
@@ -203,19 +206,21 @@ class ConnectorMixin(MiniserverProtocol):
             if self._use_tls:
                 ssl_context = ssl.create_default_context()
                 ssl_context.check_hostname = self._tls_check_hostname
-                self._ws = await self._ws_session.ws_connect(
+                self._ws = await wslib.client.connect(
                     url,
-                    timeout=HTTP_CONNECTION_TIMEOUT,
-                    ssl_context=ssl_context,
-                    protocols=["remotecontrol"],
+                    timeout=TIMEOUT,
+                    ssl=ssl_context,
+                    create_protocol=Websocket,
+                    subprotocols=["remotecontrol"],  # type: ignore
                 )
             else:
-                self._ws = await self._ws_session.ws_connect(
+                self._ws = await wslib.connect(
                     url,
-                    timeout=HTTP_CONNECTION_TIMEOUT,
-                    protocols=["remotecontrol"],
+                    timeout=TIMEOUT,
+                    create_protocol=Websocket,
+                    subprotocols=["remotecontrol"],  # type: ignore
                 )
-        except aiohttp.WSServerHandshakeError as exc:
+        except wslib.WebSocketException as exc:
             _LOGGER.error("Unable to open websocket")
             raise LoxoneException("Unable to open websocket") from exc
         _LOGGER.debug(f"Opened websocket to {url}")
